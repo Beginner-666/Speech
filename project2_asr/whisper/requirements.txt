@@ -1,0 +1,7 @@
+torch
+transformers>=4.40
+soundfile
+librosa
+filelock
+sympy==1.13.1
+opencc-python-reimplemented

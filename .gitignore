@@ -1,0 +1,34 @@
+# Large datasets and generated artifacts
+project2_asr/data_aishell/wav/
+project2_asr/data/
+project2_asr/mfcc/
+project2_asr/mfcc_perturbed/
+project2_asr/exp/
+project2_asr/downloads/
+downloads/
+
+# Kaldi generated links / temporary files
+project2_asr/steps
+project2_asr/utils
+project2_asr/sid
+project2_asr/.backup/
+*.ark
+*.scp.tmp
+*.log
+
+# Python / TeX generated files
+__pycache__/
+*.pyc
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.pdf
+
+# Large model checkpoints
+*.pt
+*.pth
+*.bin
+*.safetensors
+checkpoint-*/
