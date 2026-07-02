@@ -23,7 +23,7 @@
 }
 
 \title{Project 2：AISHELL-1 约 10 小时子集中文语音识别系统实验报告}
-\author{姓名：\underline{\hspace{4cm}} \quad 学号：\underline{\hspace{4cm}}}
+\author{林子淳 524030910206}
 \date{\today}
 
 \begin{document}
@@ -35,7 +35,7 @@
 
 \section{实验目标与任务理解}
 
-本次 Project 2 的目标不是简单运行一个脚本，而是理解中文大词汇连续语音识别系统从原始音频和标注文本到最终解码结果的完整流程。根据作业要求，本实验重点关注以下内容：
+本次 Project 2 的目标是理解中文大词汇连续语音识别系统从原始音频和标注文本到最终解码结果的完整流程。根据作业要求，本实验重点关注以下内容：
 
 \begin{itemize}
   \item 按 Kaldi 数据规范准备 \texttt{wav.scp}、\texttt{text}、\texttt{utt2spk}、\texttt{spk2utt}、词表、发音词典与语言模型文本；
@@ -73,7 +73,7 @@ Kaldi 使用本地源码构建，路径为：
   \item Whisper 相关库：PyTorch 2.6.0+cu124、Transformers 4.40.0、librosa、soundfile、OpenCC。
 \end{itemize}
 
-需要说明的是，Kaldi 的 GMM-HMM 训练阶段主要是 CPU-bound；nnet3 TDNN 和 Whisper 训练可使用 GPU。TDNN 训练脚本配置为单 GPU job，以避免 RTX 4090 上多个 GPU 训练任务同时运行导致显存竞争。
+需要说明的是，Kaldi 的 GMM-HMM 训练阶段主要在CPU上完成；nnet3 TDNN 和 Whisper 训练可使用 GPU。TDNN 训练脚本配置为单 GPU job，以避免 RTX 4090 上多个 GPU 训练任务同时运行导致显存竞争。
 
 \section{数据集与数据准备}
 
@@ -145,8 +145,6 @@ data/dev/feats.scp    14326 entries
 data/test/feats.scp    7176 entries
 \end{lstlisting}
 
-在数据检查过程中，部分 AISHELL-1 test WAV 文件曾出现 0 字节问题，已通过从原始 tar 包重新解压对应 speaker 归档进行修复。修复后不再存在 0 字节音频文件，避免了解码与特征提取阶段的连锁错误。
-
 \section{传统 Kaldi LVCSR 系统}
 
 \subsection{特征提取}
@@ -200,7 +198,7 @@ project2_asr/exp/nnet3/tdnn_sp/decode_test
 
 \subsection{引入 Whisper 的原因}
 
-作业要求允许并鼓励尝试不同范式的神经网络模型，但若使用预训练权重进行 SFT，需要严格报告微调前后的测试集性能差异。因此，本实验在 Kaldi 系统之外额外实现 Whisper-small 实验，用同一份 AISHELL-1 数据划分进行 baseline 解码与监督微调。
+作业鼓励尝试不同范式的神经网络模型，若使用预训练权重进行 SFT需要严格报告微调前后的测试集性能差异。因此，本实验在 Kaldi 系统之外额外实现 Whisper-small 实验，用同一份 AISHELL-1 数据划分进行 baseline 解码与监督微调。
 
 Whisper 实验目录为：
 
@@ -322,7 +320,9 @@ CER 计算方式为：
   \item 英文字母小写化。
 \end{itemize}
 
-该处理避免将 ``因為/因为''、``儲備/储备''、全角半角差异或标点差异计为识别错误。规范化脚本为：
+Whisper 评分脚本按字符级统一计算，因此 Whisper 表中的 WER 与 CER 数值一致，与 Kaldi 的词级 WER 口径不同，仅作为参考。
+
+该处理避免将 ``因為/因为''、``儲備/储备''、全角半角差异或标点差异计为识别错误。规范化评分会在最佳结果目录中生成与该模型输出一致的 \texttt{test_filt.txt} 和 \texttt{test_filt.chars.txt}，同时保留 \texttt{hyp_filt.txt} 与 \texttt{hyp_filt.chars.txt} 便于核查预测文本和参考文本格式。规范化脚本为：
 
 \begin{lstlisting}
 project2_asr/whisper/score_whisper.py
@@ -350,7 +350,7 @@ GMM-HMM 系统测试集结果如表 \ref{tab:gmm-results} 所示。
   \end{tabular}
 \end{table}
 
-其中最佳 GMM-HMM 为 \texttt{tri4a}，测试集 CER 为 20.89\%。nnet3 TDNN 结果如表 \ref{tab:tdnn-results} 所示。
+其中最佳 GMM-HMM 为 \texttt{tri4a}，测试集 CER 为 20.89\%。\texttt{tri5a} 相比 \texttt{tri4a} 未见提升，推测在约 10 小时小数据量下，后续特征或说话人自适应变换可能出现过拟合或估计不稳定。nnet3 TDNN 结果如表 \ref{tab:tdnn-results} 所示。
 
 \begin{table}[htbp]
   \centering
@@ -503,6 +503,6 @@ bash whisper/run_whisper_best_decode.sh exp/whisper_small/finetuned/best 4
 
 \section{结论}
 
-本实验完成了作业要求的完整 ASR 系统构建流程。Kaldi GMM-HMM 系统提供了传统 ASR 基线和 DNN-HMM 所需对齐；nnet3 TDNN 相比 GMM-HMM 进一步降低测试集 CER，体现了神经声学模型的优势。在额外的 Whisper-small 实验中，预训练模型未经微调时测试集 CER 为 26.77\%，而在相同约 10 小时训练集上微调后，规范化测试集 CER 降至 8.45\%，显著优于 Kaldi TDNN。最终推荐提交结果为 Whisper-small 微调 final checkpoint 的规范化评分结果，同时报告 Kaldi GMM-HMM 与 TDNN 作为完整 LVCSR pipeline 的传统系统对照。
+本实验完成了作业要求的完整 ASR 系统构建流程。Kaldi GMM-HMM 系统提供了传统 ASR 基线和 DNN-HMM 所需对齐；nnet3 TDNN 相比 GMM-HMM 进一步降低测试集 CER，体现了神经声学模型的优势。在额外的 Whisper-small 实验中，预训练模型未经微调时测试集 CER 为 26.77\%，而在相同约 10 小时训练集上微调后，规范化测试集 CER 降至 8.45\%，显著优于 Kaldi TDNN。
 
 \end{document}

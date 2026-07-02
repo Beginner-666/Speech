@@ -109,6 +109,23 @@ def score(
     return rate, total, ins, dels, subs
 
 
+def write_filtered_outputs(refs: dict[str, str], hyps: dict[str, str], out_dir: Path, normalize: bool) -> None:
+    def spaced_chars(text: str) -> str:
+        return " ".join(list(normalize_for_cer(text, normalize)))
+
+    with (out_dir / "test_filt.txt").open("w", encoding="utf-8") as ref_f, \
+        (out_dir / "test_filt.chars.txt").open("w", encoding="utf-8") as ref_c, \
+        (out_dir / "hyp_filt.txt").open("w", encoding="utf-8") as hyp_f, \
+        (out_dir / "hyp_filt.chars.txt").open("w", encoding="utf-8") as hyp_c:
+        for utt_id in sorted(refs):
+            ref_text = normalize_for_cer(refs[utt_id], normalize)
+            hyp_text = normalize_for_cer(hyps.get(utt_id, ""), normalize)
+            ref_f.write(f"{utt_id} {ref_text}\n")
+            ref_c.write(f"{utt_id} {spaced_chars(refs[utt_id])}\n")
+            hyp_f.write(f"{utt_id} {hyp_text}\n")
+            hyp_c.write(f"{utt_id} {spaced_chars(hyps.get(utt_id, ''))}\n")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--ref", type=Path, required=True)
@@ -122,6 +139,7 @@ def main() -> None:
     args.out_dir.mkdir(parents=True, exist_ok=True)
     normalize = not args.no_normalize
 
+    write_filtered_outputs(refs, hyps, args.out_dir, normalize)
     wer = score(refs, hyps, "word", normalize)
     cer = score(refs, hyps, "char", normalize)
     norm_note = "normalized" if normalize else "raw"
